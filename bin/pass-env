@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+PREFIX="${PASSWORD_STORE_DIR:-$HOME/.password-store}"
+GIT_DIR="${PASSWORD_STORE_GIT:-$PREFIX}/.git"
+GIT_WORK_TREE="${PASSWORD_STORE_GIT:-$PREFIX}"
+
+git_add_file() {
+	[[ -d $GIT_DIR ]] || return
+	git -C $GIT_WORK_TREE add "$1" || return
+	[[ -n $(git -C $GIT_WORK_TREE status --porcelain "$1") ]] || return
+	git_commit "$2"
+}
+git_commit() {
+	local sign=""
+	[[ -d $GIT_DIR ]] || return
+	[[ $(git -C $GIT_WORK_TREE config --bool --get pass.signcommits) == "true" ]] && sign="-S"
+	git -C $GIT_WORK_TREE commit $sign -m "$1"
+}
+
+function usage() {
+    echo "Usage: ${0##*/} [-v] COMMAND ARGS..."
+    echo "Commands:"
+    echo "      set    ENV_VARIABLE ITEM     registers ITEM to be retrieved when exporting"
+    echo "                                   ENV_VARIABLE without ITEM name"
+    echo "      delete ENV_VARIABLE          deletes ENV_VARIABLE from ITEM lookup"
+    echo "      delete                       deletes all registered ENV_VARIABLE"
+    echo "      list                         lists all exported environment variables"
+    return 1
+}
+
+function pass-env-delete() {
+    [ $# -le 1 ] || {
+        usage
+        return
+    }
+    if [ $# -eq 0 ]; then
+        > ${PREFIX}/.pass-env
+    else
+        if [ -e ${PREFIX}/.pass-env ]; then
+            sed -i.old '/^PASS_ENV_LOOKUP_'${1}'=/d' ${PREFIX}/.pass-env
+            rm ${PREFIX}/.pass-env.old
+        fi
+    fi
+}
+
+function pass-env-set() {
+    [ $# -eq 2 ] || {
+        usage
+        return
+    }
+    pass-env-delete $1
+    echo "PASS_ENV_LOOKUP_${1}=${2}" >> ${PREFIX}/.pass-env
+}
+
+function pass-env-list() {
+    sed 's/^PASS_ENV_LOOKUP_\(.*\)=.*$/\1/g' ${PREFIX}/.pass-env
+}
+
+case $1 in
+    delete)
+        shift
+        pass-env-delete $@
+        git_add_file ${PREFIX}/.pass-env "Delete environment variable ${2} lookup"
+        ;;
+    set)
+        shift
+        pass-env-set $@
+        git_add_file ${PREFIX}/.pass-env "Add environment variable ${2} exported from ${3}"
+        ;;
+    list)
+        shift
+        pass-env-list $@
+        ;;
+    *)
+        usage
+        ;;
+esac
