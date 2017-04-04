@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-function usage() {
+function pass-env-usage() {
     echo "Usage: penv [-v] COMMAND ARGS..."
     echo "Commands:"
     echo "      export ENV_VARIABLE ITEM     decrypts pass ITEM and store it to ENV_VARIABLE"
@@ -14,7 +14,7 @@ function usage() {
 
 function pass-env-unset-all() {
     [ $# -eq 0 ] || {
-        usage
+        pass-env-usage
         return
     }
     for key in $(sed 's/^PASS_ENV_LOOKUP_\(.*\)=.*$/\1/g' ${PREFIX}/.pass-env); do
@@ -24,7 +24,7 @@ function pass-env-unset-all() {
 
 function pass-env-export() {
     [ $# -eq 2 ] || {
-        usage
+        pass-env-usage
         return
     }
     local passwd=$(pass show ${2})
@@ -35,7 +35,7 @@ function pass-env-export() {
 
 function pass-env-export-key() {
     [ $# -eq 1 ] || {
-        usage
+        pass-env-usage
         return
     }
     PREFIX="${PASSWORD_STORE_DIR:-$HOME/.password-store}"
@@ -53,7 +53,7 @@ function pass-env-export-key() {
 
 function pass-env-export-all() {
     [ $# -eq 0 ] || {
-        usage
+        pass-env-usage
         return
     }
     PREFIX="${PASSWORD_STORE_DIR:-$HOME/.password-store}"
@@ -83,7 +83,7 @@ function penv() {
                     ;;
                 *)
                     {
-                        usage
+                        pass-env-usage
                         return
                     }
                     ;;
@@ -95,7 +95,7 @@ function penv() {
             ;;
         *)
             {
-                usage
+                pass-env-usage
                 return
             }
             ;;
